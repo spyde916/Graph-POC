@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Financial Data Flow Tree</title>
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="https://code.highcharts.com/modules/treemap.js"></script>
+  <script src="https://code.highcharts.com/modules/treegraph.js"></script>
+  <script src="https://code.highcharts.com/modules/exporting.js"></script>
+  <script src="https://code.highcharts.com/modules/accessibility.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+      color: #333;
+    }
+
+    header {
+      background-color: #1d3557;
+      color: white;
+      padding: 20px 0;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 36px;
+      letter-spacing: 1px;
+    }
+
+    .container {
+      width: 70%;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .highcharts-figure {
+      width: 100%;
+      height: auto;
+      min-height: 500px;
+    }
+
+    .highcharts-description {
+      font-size: 16px;
+      color: #555;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .export-button {
+      display: block;
+      width: 200px;
+      padding: 10px;
+      margin: 20px auto;
+      background-color: #1d3557;
+      color: white;
+      text-align: center;
+      border-radius: 5px;
+      text-decoration: none;
+    }
+
+    .export-button:hover {
+      background-color: #457b9d;
+    }
+
+    @media (max-width: 768px) {
+      header h1 {
+        font-size: 28px;
+      }
+
+      .container {
+        width: 95%;
+        padding: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Financial Data Flow Tree</h1>
+  </header>
+
+  <div class="container">
+    <figure class="highcharts-figure">
+      <div id="container"></div>
+      <p class="highcharts-description">
+        This treegraph visualization shows the flow of financial investments across different sectors. 
+      </p>
+      <p class="highcharts-description">Click a node to highlight its path from the root.</p>
+    </figure>
+
+    <!-- <a href="javascript:void(0)" class="export-button" onclick="downloadChart()">Download Chart</a> -->
+  </div>
+
+  <script>
+    const chart = Highcharts.chart('container', {
+      chart: {
+        spacingBottom: 30,
+        marginRight: 120,
+        height: 700,
+        width: 700
+      },
+      title: {
+        text: 'Financial Data Flow Tree'
+      },
+      plotOptions: {
+        series: {
+          point: {
+            events: {
+              click: function () {
+                const allPoints = chart.series[0].points;
+
+                // Reset all points
+                allPoints.forEach(p => {
+                  p.update({
+                    color: null,
+                    dataLabels: {
+                      style: {
+                        fontWeight: 'normal',
+                        color: '#000',
+                        fontSize: '12px'
+                      }
+                    },
+                    marker: {
+                      lineColor: null,
+                      lineWidth: 3,
+                      fillColor: '#ffffff',
+                      radius: 6
+                    },
+                    link: {
+                      color: '#cccccc',
+                      width: 1
+                    }
+                  }, false);
+                });
+
+                // Traverse from clicked node to root
+                const path = [];
+                let current = this;
+                while (current) {
+                  path.push(current);
+                  current = allPoints.find(p => p.id === current.parent);
+                }
+
+                // Highlight path
+                path.forEach(p => {
+                  p.update({
+                    color: '#e63946',
+                    dataLabels: {
+                      style: {
+                        fontWeight: 'bold',
+                        color: '#e63946',
+                        fontSize: '14px'
+                      }
+                    },
+                    marker: {
+                      lineColor: '#e63946',
+                      lineWidth: 5,
+                      fillColor: '#ffe0e0',
+                      radius: 8
+                    },
+                    link: {
+                      color: '#e63946',
+                      width: 4
+                    }
+                  }, false);
+                });
+
+                chart.redraw();
+              }
+            }
+          }
+        }
+      },
+      series: [{
+        type: 'treegraph',
+        keys: ['parent', 'id', 'level'],
+        clip: false,
+        data: [
+          [undefined, 'Investment Fund'],
+          ['Investment Fund', 'Technology'],
+          ['Investment Fund', 'Healthcare'],
+          ['Investment Fund', 'Energy'],
+          ['Investment Fund', 'Real Estate'],
+          ['Technology', 'Company A'],
+          ['Technology', 'Company B'],
+          ['Technology', 'Company C'],
+          ['Healthcare', 'Company D'],
+          ['Healthcare', 'Company E'],
+          ['Healthcare', 'Company F'],
+          ['Energy', 'Company G'],
+          ['Energy', 'Company H'],
+          ['Real Estate', 'Company I'],
+          ['Real Estate', 'Company J'],
+          ['Real Estate', 'Company K'],
+          ['Company A', 'Investment: $10M', 6],
+          ['Company B', 'Investment: $20M', 6],
+          ['Company C', 'Investment: $15M', 6],
+          ['Company D', 'Investment: $5M', 6],
+          ['Company E', 'Investment: $8M', 6],
+          ['Company F', 'Investment: $12M', 6],
+          ['Company G', 'Investment: $7M', 6],
+          ['Company H', 'Investment: $9M', 6],
+          ['Company I', 'Investment: $6M', 6],
+          ['Company J', 'Investment: $4M', 6],
+          ['Company K', 'Investment: $10M', 6]
+        ],
+        marker: {
+          symbol: 'circle',
+          radius: 6,
+          fillColor: '#ffffff',
+          lineWidth: 3
+        },
+        dataLabels: {
+          align: 'left',
+          pointFormat: '{point.id}',
+          style: {
+            color: '#000000',
+            textOutline: '3px #ffffff',
+            whiteSpace: 'nowrap'
+          },
+          x: 24,
+          crop: false,
+          overflow: 'none'
+        },
+        link: {
+          color: '#999999',
+          width: 1
+        },
+        levels: [
+          {
+            level: 1,
+            levelIsConstant: false
+          },
+          {
+            level: 2,
+            colorByPoint: true
+          },
+          {
+            level: 3,
+            colorVariation: {
+              key: 'brightness',
+              to: -0.5
+            }
+          },
+          {
+            level: 4,
+            colorVariation: {
+              key: 'brightness',
+              to: 0.5
+            }
+          },
+          {
+            level: 6,
+            dataLabels: {
+              x: 10
+            },
+            marker: {
+              radius: 4
+            }
+          }
+        ]
+      }]
+    });
+
+    // function downloadChart() {
+    //   chart.exportChart({ type: 'image/png' });
+    // }
+  </script>
+</body>
+</html>

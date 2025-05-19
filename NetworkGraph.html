@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Field Flow Network Graph</title>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/networkgraph.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            background: #f4f7f9;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+            font-size: 24px;
+            background: #2c3e50;
+            color: #fff;
+            position: relative;
+        }
+
+        #resetIcon {
+            position: absolute;
+            top: 80px;
+            right: 30px;
+            background: white;
+            border: none;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        #resetIcon:hover {
+            background: #e0e0e0;
+            transform: rotate(20deg);
+        }
+
+        #resetIcon svg {
+            width: 20px;
+            height: 20px;
+            fill: #333;
+        }
+
+        #container {
+            height: 600px;
+            margin: 40px auto;
+            width: 90%;
+            max-width: 1200px;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+        }
+
+        .highlighted-node {
+            animation: pulse 1.5s ease-out infinite, gradient-shift 3s linear infinite, sparkle 2s ease-out infinite;
+            filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8));
+        }
+
+        .highlighted-node-3d {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.08);
+            transform: scale(1.1);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes gradient-shift {
+            0% { background: linear-gradient(45deg, #ffd700, #ffeb3b); }
+            50% { background: linear-gradient(45deg, #ffeb3b, #ff007f); }
+            100% { background: linear-gradient(45deg, #ff007f, #ffd700); }
+        }
+
+        @keyframes sparkle {
+            0% { box-shadow: 0 0 5px 2px rgba(255, 215, 0, 0.8), 0 0 10px 4px rgba(255, 215, 0, 0.6); }
+            50% { box-shadow: 0 0 20px 6px rgba(255, 215, 0, 1), 0 0 30px 10px rgba(255, 215, 0, 0.8); }
+            100% { box-shadow: 0 0 5px 2px rgba(255, 215, 0, 0.8), 0 0 10px 4px rgba(255, 215, 0, 0.6); }
+        }
+
+        @media (max-width: 768px) {
+            #container {
+                width: 95%;
+                padding: 10px;
+            }
+
+            #resetIcon {
+                top: 65px;
+                right: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Field Flow to Output File (RTS 22)</h1>
+
+    <p class="highcharts-description">Click a node to highlight its path from the root.</p>
+
+    <!-- SVG Icon Button -->
+    <button id="resetIcon" title="Reset Graph">
+        <svg viewBox="0 0 24 24">
+            <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6a6 6 0 0 1-6 6c-2.2 0-4.14-1.28-5.11-3.17l-1.79.9A7.977 7.977 0 0 0 12 21c4.42 0 8-3.58 8-8s-3.58-8-8-8z"/>
+        </svg>
+    </button>
+
+    <div id="container"></div>
+
+    <script>
+            const nodes = [
+            { id: 'RTS 22', marker: { radius: 40, symbol: 'square' }, color: '#434348', plotX: 390.543004653047, plotY: 258.65546239131345 },
+            { id: 'Kraken', marker: { radius: 40, symbol: 'square' }, color: '#f7a35c', plotX: 282.7973156490041, plotY: 204.21374422629742 },
+            { id: 'DeelFeed', marker: { radius: 40, symbol: 'square' }, color: '#434348', plotX: 288.9266715858981, plotY: 323.4275491981332 },
+            { id: 'Trade Enricher', marker: { radius: 40, symbol: 'square' }, color: '#90ed7d', plotX: 179.82218892635169, plotY: 269.60495464059227 },
+            { id: 'FXALL GUI', marker: { radius: 40, symbol: 'square' }, color: '#7cb5ec', plotX: 55.27415164457324, plotY: 270.95077287426636 },
+              { id: 'Data Transform', marker: { radius: 40, symbol: 'square' }, color: '#90ed7d', plotX: 169.82218892635169, plotY: 269.60495464059227 },
+        ];
+
+        const links = [
+            ['FXALL GUI', 'Data Transform'],
+            ['Data Transform', 'Trade Enricher'],
+            ['Kraken', 'RTS 22'],
+            ['DeelFeed', 'RTS 22'],
+            ['Trade Enricher', 'Kraken'],
+            ['Trade Enricher', 'DeelFeed'],
+        ];
+
+
+        const reverseLinkMap = {};
+        links.forEach(([from, to]) => {
+            if (!reverseLinkMap[to]) reverseLinkMap[to] = [];
+            reverseLinkMap[to].push(from);
+        });
+
+        function getParentHierarchy(start, visited = new Set()) {
+            if (visited.has(start)) return;
+            visited.add(start);
+            const parents = reverseLinkMap[start] || [];
+            parents.forEach(parent => getParentHierarchy(parent, visited));
+            return visited;
+        }
+
+        function highlightPath(startId) {
+            const parentNodes = getParentHierarchy(startId);
+
+            chart.series[0].nodes.forEach(point => {
+                const original = nodes.find(n => n.id === point.id);
+                point.update({ color: original.color }, false);
+                point.graphic.attr('class', '');
+            });
+
+            chart.series[0].nodes.forEach(point => {
+                if (parentNodes.has(point.id)) {
+                    point.update({ color: '#ffd700' }, false);
+                    point.graphic.attr('class', 'highlighted-node highlighted-node-3d');
+                }
+            });
+
+            chart.redraw();
+        }
+
+        function resetChart() {
+            chart.series[0].nodes.forEach(point => {
+                const original = nodes.find(n => n.id === point.id);
+                if (original) {
+                    point.update({ color: original.color }, false);
+                    point.graphic.attr('class', '');
+                }
+            });
+            chart.redraw();
+        }
+
+        const chart = Highcharts.chart('container', {
+            chart: {
+                type: 'networkgraph',
+                animation: true
+            },
+            title: { text: '' },
+            plotOptions: {
+                networkgraph: {
+                    keys: ['from', 'to'],
+                    layoutAlgorithm: {
+                        enableSimulation: false,
+                        integration: 'verlet',
+                        linkLength: 120
+                    }
+                },
+                series: {
+                    point: {
+                        events: {
+                            click: function () {
+                                highlightPath(this.id);
+                            }
+                        }
+                    }
+                }
+            },
+            series: [{
+                dataLabels: {
+                    enabled: true,
+                    linkFormat: ''
+                },
+                nodes: nodes,
+                data: links.map(link => ({ from: link[0], to: link[1], color: '#ccc' }))
+            }]
+        });
+
+        document.getElementById('resetIcon').addEventListener('click', resetChart);
+    </script>
+</body>
+</html>
